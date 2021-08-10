@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+tmp/
+*.Rproj
+data/
+www/bia.jpg
+www/bia.png
+*.Rout
+
+
