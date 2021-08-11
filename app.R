@@ -75,83 +75,141 @@ ui <- fluidPage(
     titlePanel("Kosten calculator auto: elektrisch-youngtimer/zakelijk-prive 2022"),
 
     # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            conditionalPanel(
-                condition = "output.browser",
-                actionButton(inputId = 'browser','browser/debug()')),
+    column(width = 2,
+        conditionalPanel(
+            condition = "output.browser",
+            actionButton(inputId = 'browser','browser/debug()')),
+        wellPanel(
+            sliderInput(
+                 "scenario",
+                 "Aantal scenario's:",
+                 min = 1,
+                 max = 2,
+                 value = 1,
+                 step = 1,
+                 ticks = FALSE
+            )
+         ),
+        wellPanel(
+            strong('Scenario 1'),
+            selectInput(
+              'cartype'
+              ,label = 'type auto'
+              ,choices = c('Elektrisch','Benzine')
+            ),
             sliderInput("kmpj",
-                        "Kilometer per jaar:",
-                        min = 10000,
-                        max = 50000,
-                        value = 15000),
+                      "Kilometer per jaar:",
+                      min = 10000,
+                      max = 50000,
+                      value = 15000),
             sliderInput("prijs",
-                        "Prijs auto:",
-                        min = 10000,
-                        max = 100000,
-                        value = 46500),
+                      "Prijs auto:",
+                      min = 10000,
+                      max = 100000,
+                      value = 46500),
             sliderInput("ink",
-                        "inkomen per jaar:",
-                        min = 20000,
-                        max = 100000,
-                        value = 70000),
-            sliderInput("prijskwh",
-                        "kWh prijs",
-                        min = 0,
-                        max = 1,
-                        value = 0.24),
-            sliderInput("prijsbenz",
-                        "Benzine Prijs",
-                        min = 1.50,
-                        max = 2.50,
-                        value = 1.83),
-            sliderInput("verbruikElec",
-                        "Verbruik Elektrisch in kWh/100Km",
-                        min = 5,
-                        max = 35,
-                        value = 20),
-            sliderInput("verbruikBenz",
-                        "Verbruik Benzine in L/100Km",
-                        min = 1,
-                        max = 15,
-                        value = 10),
+                      "inkomen per jaar:",
+                      min = 20000,
+                      max = 100000,
+                      value = 70000),
             
+            uiOutput('carOpts')
+         
             
+       
             
-            
-        ),
+          
+         ),
+    ),
 
-        # Show a plot of the generated distribution
-        mainPanel(
-            htmlOutput("distPlot")
-            ,HTML('<br><br><br>')
-            ,htmlOutput("bijtelling")
-        )
-    )
+    column(
+        width = 8
+        ,htmlOutput("brandstof")
+        ,HTML('<br><br><br>')
+        ,htmlOutput("bijtelling")
+  )
+    
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
     
-    output$distPlot <- renderText({
+    getCarTypeOpts <- function(x = 'Elektrisch'){
+        
+        message(x)
+        if (x=='Elektrisch'){
+            tagList(     
+                sliderInput("prijskwh",
+                     "kWh prijs",
+                     min = 0,
+                     max = 1,
+                     value = 0.24),
+                sliderInput("verbruikElec",
+                     "Verbruik Elektrisch in kWh/100Km",
+                     min = 5,
+                     max = 35,
+                     value = 20),
+            )
+        } else if (x=='Benzine'){
+            tagList(
+                sliderInput("prijsbenz",
+                            "Benzine Prijs",
+                            min = 1.50,
+                            max = 2.50,
+                            value = 1.83),
+                
+                sliderInput("verbruikBenz",
+                            "Verbruik Benzine in L/100Km",
+                            min = 1,
+                            max = 15,
+                            value = 10)
+            )
+            
+        }
+    
+           
+    }
+    
+    
+    
+    
+    
+    
+    observeEvent(input$cartype,{
+        message(input$cartype)
+        
+        
+    })
+    
+    output$carOpts <- renderUI({
+        input$cartype
+        
+        if (!is.null(input[['cartype']])){
+            tagList(do.call(getCarTypeOpts,as.list(input$cartype)))
+        }
+        
+    })
+    
+    
+    output$brandstof <- renderText({
         # generate bins based on input$bins from ui.R
         x    <- input$kmpj
         #bins <- seq(input$ink, input$kmpj, length.out = input$bins + 1)
         
-        kwh <- (x/100)*20
+        kwh <- (x/100)*input$verbruikElec
         kosten <- kwh*.24
         
-        text <- paste('<b>Elektrisch</b><br><br>'
-                        ,'kosten elektrisch bij verbruik van 20kWh/100km <br>'
-                        , x, 'kilometer per jaar <br>'
-                        , kwh, 'kWh <br>'
-                        , '€0,24 per kWh : €'
-                        , kosten)
+        text <- paste0('<b>Brandstof - Elektrisch</b><br><br>'
+                      ,'Kosten (',input$verbruikElec,'kWh/100km) <br>'
+                      , x, 'kilometer per jaar <br>'
+                      , kwh, 'kWh <br>'
+                      , '€0,24 per kWh : €'
+                      , kosten)
         
         
         
-      
+        
         text
         # draw the histogram with the specified number of bins
         #hist(x, breaks = bins, col = 'darkgray', border = 'white')
@@ -178,14 +236,9 @@ server <- function(input, output) {
                       ,'<br>Bijtelling hoog: €', y2
                       , '<br>Bijtelling totaal: €',y1+y2, ' <br>'
         )
-                      
-        
-        
-        
-        
+ 
         text
-        # draw the histogram with the specified number of bins
-        #hist(x, breaks = bins, col = 'darkgray', border = 'white')
+       
     })
     
     output$browser <- reactive({if (!(Sys.info()[4] %in% c("umcbiadasht01.umcn.nl","umcbiadashp01.umcn.nl"))) {TRUE} else {FALSE}})
